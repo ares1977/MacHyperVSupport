@@ -1,38 +1,18 @@
 //
-//  HyperVGraphicsBridgePrivate.cpp
-//  Hyper-V synthetic graphics bridge
+//  HyperVGraphicsProviderPrivate.cpp
+//  Hyper-V synthetic graphics provider
 //
-//  Copyright © 2022 Goldfish64. All rights reserved.
+//  Copyright © 2021-2022 Goldfish64. All rights reserved.
 //
 
-#include "HyperVGraphicsBridge.hpp"
+#include "HyperVGraphicsProvider.hpp"
 
 static const VMBusVersion graphicsVersions[] = {
   kHyperVGraphicsVersionV3_2,
   kHyperVGraphicsVersionV3_0
 };
 
-void HyperVGraphicsBridge::fillFakePCIDeviceSpace() {
-  //
-  // Fill PCI device config space.
-  //
-  // PCI bridge will contain a single PCI graphics device
-  // with the framebuffer memory at BAR0. The vendor/device ID is
-  // the same as what a generation 1 Hyper-V VM uses for the
-  // emulated graphics.
-  //
-  bzero(_fakePCIDeviceSpace, sizeof (_fakePCIDeviceSpace));
-
-  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigVendorID, kHyperVPCIVendorMicrosoft);
-  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigDeviceID, kHyperVPCIDeviceHyperVVideo);
-  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigRevisionID, 0x3000000);
-  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemVendorID, kHyperVPCIVendorMicrosoft);
-  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemID, kHyperVPCIDeviceHyperVVideo);
-
-  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)_consoleInfo.v_baseAddr);
-}
-
-void HyperVGraphicsBridge::handlePacket(VMBusPacketHeader *pktHeader, UInt32 pktHeaderLength, UInt8 *pktData, UInt32 pktDataLength) {
+void HyperVGraphicsProvider::handlePacket(VMBusPacketHeader *pktHeader, UInt32 pktHeaderLength, UInt8 *pktData, UInt32 pktDataLength) {
   HyperVGraphicsMessage *gfxMsg = (HyperVGraphicsMessage*) pktData;
   void                  *responseBuffer;
   UInt32                responseLength;
@@ -56,7 +36,7 @@ void HyperVGraphicsBridge::handlePacket(VMBusPacketHeader *pktHeader, UInt32 pkt
   }
 }
 
-IOReturn HyperVGraphicsBridge::sendGraphicsMessage(HyperVGraphicsMessage *gfxMessage, HyperVGraphicsMessage *gfxMessageResponse, UInt32 gfxMessageResponseSize) {
+IOReturn HyperVGraphicsProvider::sendGraphicsMessage(HyperVGraphicsMessage *gfxMessage, HyperVGraphicsMessage *gfxMessageResponse, UInt32 gfxMessageResponseSize) {
   gfxMessage->pipeHeader.type = kHyperVGraphicsPipeMessageTypeData;
   gfxMessage->pipeHeader.size = gfxMessage->gfxHeader.size;
 
@@ -65,7 +45,7 @@ IOReturn HyperVGraphicsBridge::sendGraphicsMessage(HyperVGraphicsMessage *gfxMes
                                                        gfxMessageResponse, gfxMessageResponseSize);
 }
 
-IOReturn HyperVGraphicsBridge::negotiateVersion(VMBusVersion version) {
+IOReturn HyperVGraphicsProvider::negotiateVersion(VMBusVersion version) {
   IOReturn status;
   HyperVGraphicsMessage gfxMsg = { };
 
@@ -86,7 +66,7 @@ IOReturn HyperVGraphicsBridge::negotiateVersion(VMBusVersion version) {
   return gfxMsg.versionResponse.accepted != 0 ? kIOReturnSuccess : kIOReturnUnsupported;
 }
 
-IOReturn HyperVGraphicsBridge::connectGraphics() {
+IOReturn HyperVGraphicsProvider::connectGraphics() {
   bool foundVersion = false;
   IOReturn status;
 
@@ -110,4 +90,3 @@ IOReturn HyperVGraphicsBridge::connectGraphics() {
 
   return kIOReturnSuccess;
 }
-

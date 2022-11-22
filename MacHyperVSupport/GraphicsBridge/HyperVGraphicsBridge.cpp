@@ -7,6 +7,7 @@
 
 #include "HyperVGraphicsBridge.hpp"
 #include "HyperVPCIRoot.hpp"
+#include "HyperVGraphicsProvider.hpp"
 
 #include <IOKit/IOPlatformExpert.h>
 #include <IOKit/IODeviceTreeSupport.h>
@@ -14,25 +15,28 @@
 OSDefineMetaClassAndStructors(HyperVGraphicsBridge, super);
 
 bool HyperVGraphicsBridge::start(IOService *provider) {
-  bool     result = false;
-  IOReturn status;
+  HyperVGraphicsProvider *gfxProvider;
+  IORangeScalar          fbTotalLength;
 
   //
-  // Get parent VMBus device object.
+  // Get parent HyperVGraphicsProvider object.
   //
-  _hvDevice = OSDynamicCast(HyperVVMBusDevice, provider);
-  if (_hvDevice == nullptr) {
+  gfxProvider = OSDynamicCast(HyperVGraphicsProvider, provider);
+  if (gfxProvider == nullptr) {
     HVSYSLOG("Provider is not HyperVVMBusDevice");
     return false;
   }
-  _hvDevice->retain();
+
+  //
+  // Get initial framebuffer info.
+  //
+  gfxProvider->getFramebufferArea(&_fbBaseAddress, &fbTotalLength, &_fbInitialLength);
 
   HVCheckDebugArgs();
   HVDBGLOG("Initializing Hyper-V Synthetic Graphics Bridge");
 
   if (HVCheckOffArg()) {
     HVSYSLOG("Disabling Hyper-V Synthetic Graphics Bridge due to boot arg");
-    OSSafeReleaseNULL(_hvDevice);
     return false;
   }
 
@@ -44,7 +48,6 @@ bool HyperVGraphicsBridge::start(IOService *provider) {
     HVDBGLOG("Existing PCI bus found (Gen1 VM), will not start");
 
     OSSafeReleaseNULL(pciEntry);
-    OSSafeReleaseNULL(_hvDevice);
     return false;
   }
 
@@ -53,28 +56,14 @@ bool HyperVGraphicsBridge::start(IOService *provider) {
   //
   if (!HyperVPCIRoot::registerChildPCIBridge(this)) {
     HVSYSLOG("Failed to register with root PCI bus instance");
-    OSSafeReleaseNULL(_hvDevice);
     return false;
   }
-
-  //
-  // Pull console info.
-  // TODO: Use actual info from Hyper-V VMBus device for this.
-  //
-  if (getPlatform()->getConsoleInfo(&_consoleInfo) != kIOReturnSuccess) {
-    HVSYSLOG("Failed to get console info");
-    OSSafeReleaseNULL(_hvDevice);
-    return false;
-  }
-  HVDBGLOG("Console is at 0x%X (%ux%u, bpp: %u, bytes/row: %u)",
-         _consoleInfo.v_baseAddr, _consoleInfo.v_height, _consoleInfo.v_width, _consoleInfo.v_depth, _consoleInfo.v_rowBytes);
 
   _pciLock = IOSimpleLockAlloc();
   fillFakePCIDeviceSpace();
 
   if (!super::start(provider)) {
     HVSYSLOG("super::start() returned false");
-    OSSafeReleaseNULL(_hvDevice);
     return false;
   }
 
@@ -94,51 +83,12 @@ bool HyperVGraphicsBridge::start(IOService *provider) {
     childIterator->release();
   }
 
-  do {
-    //
-    // Install packet handler.
-    //
-    status = _hvDevice->installPacketActions(this, OSMemberFunctionCast(HyperVVMBusDevice::PacketReadyAction, this, &HyperVGraphicsBridge::handlePacket),
-                                             nullptr, kHyperVGraphicsMaxPacketSize);
-    if (status != kIOReturnSuccess) {
-      HVSYSLOG("Failed to install packet handler with status 0x%X", status);
-      break;
-    }
-
-    //
-    // Open VMBus channel and connect to graphics system.
-    //
-    status = _hvDevice->openVMBusChannel(kHyperVGraphicsRingBufferSize, kHyperVGraphicsRingBufferSize);
-    if (status != kIOReturnSuccess) {
-      HVSYSLOG("Failed to open VMBus channel with status 0x%X", status);
-      break;
-    }
-
-    status = connectGraphics();
-    if (status != kIOReturnSuccess) {
-      HVSYSLOG("Failed to connect to graphics device with status 0x%X", status);
-      break;
-    }
-
-    HVDBGLOG("Initialized Hyper-V Synthetic Graphics Bridge");
-    result = true;
-  } while (false);
-
-  if (!result) {
-    stop(provider);
-  }
-  return result;
+  HVDBGLOG("Initialized Hyper-V Synthetic Graphics Bridge");
+  return true;
 }
 
 void HyperVGraphicsBridge::stop(IOService *provider) {
   HVDBGLOG("Hyper-V Synthetic Graphics Bridge is stopping");
-
-  if (_hvDevice != nullptr) {
-    _hvDevice->closeVMBusChannel();
-    _hvDevice->uninstallPacketActions();
-    OSSafeReleaseNULL(_hvDevice);
-  }
-
   super::stop(provider);
 }
 
@@ -146,8 +96,7 @@ bool HyperVGraphicsBridge::configure(IOService *provider) {
   //
   // Add framebuffer memory range to bridge.
   //
-  UInt32 fbSize = (UInt32)(_consoleInfo.v_height * _consoleInfo.v_rowBytes);
-  addBridgeMemoryRange(_consoleInfo.v_baseAddr, fbSize, true);
+  addBridgeMemoryRange(_fbBaseAddress, _fbInitialLength, true);
   return super::configure(provider);
 }
 
@@ -188,8 +137,7 @@ void HyperVGraphicsBridge::configWrite32(IOPCIAddressSpace space, UInt8 offset, 
   
   if (offset == kIOPCIConfigurationOffsetBaseAddress0 && data == 0xFFFFFFFF) {
     HVDBGLOG("Got bar size request");
-    UInt32 fbSize = (UInt32)(_consoleInfo.v_height * _consoleInfo.v_rowBytes);
-    OSWriteLittleInt32(_fakePCIDeviceSpace, offset, (0xFFFFFFFF - fbSize) + 1);
+    OSWriteLittleInt32(_fakePCIDeviceSpace, offset, (0xFFFFFFFF - _fbInitialLength) + 1);
     return;
   }
   
@@ -261,4 +209,24 @@ void HyperVGraphicsBridge::configWrite8(IOPCIAddressSpace space, UInt8 offset, U
   _fakePCIDeviceSpace[offset] = data;
   
   IOSimpleLockUnlockEnableInterrupt(_pciLock, ints);
+}
+
+void HyperVGraphicsBridge::fillFakePCIDeviceSpace() {
+  //
+  // Fill PCI device config space.
+  //
+  // PCI bridge will contain a single PCI graphics device
+  // with the framebuffer memory at BAR0. The vendor/device ID is
+  // the same as what a generation 1 Hyper-V VM uses for the
+  // emulated graphics.
+  //
+  bzero(_fakePCIDeviceSpace, sizeof (_fakePCIDeviceSpace));
+
+  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigVendorID, kHyperVPCIVendorMicrosoft);
+  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigDeviceID, kHyperVPCIDeviceHyperVVideo);
+  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigRevisionID, 0x3000000);
+  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemVendorID, kHyperVPCIVendorMicrosoft);
+  OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemID, kHyperVPCIDeviceHyperVVideo);
+
+  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)_fbBaseAddress);
 }

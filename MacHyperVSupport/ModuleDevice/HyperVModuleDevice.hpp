@@ -1,6 +1,6 @@
 //
 //  HyperVModuleDevice.hpp
-//  Hyper-V module device driver (ACPI resources for VMBus on Gen2)
+//  Hyper-V module device driver (provides MMIO space for synthetic graphics and PCI passthrough)
 //
 //  Copyright © 2022 Goldfish64. All rights reserved.
 //
@@ -15,7 +15,7 @@
 
 class HyperVModuleDevice : public IOService {
   OSDeclareDefaultStructors(HyperVModuleDevice);
-  HVDeclareLogFunctions("pcim");
+  HVDeclareLogFunctions("hmod");
   typedef IOService super;
 
 private:
@@ -25,12 +25,14 @@ private:
   IORangeAllocator *_rangeAllocatorLow  = nullptr;
   IORangeAllocator *_rangeAllocatorHigh = nullptr;
 
+  bool getFramebufferArea();
+
 public:
   //
   // IOService overrides.
   //
-  virtual bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
-  virtual void stop(IOService *provider) APPLE_KEXT_OVERRIDE;
+  bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
+  void stop(IOService *provider) APPLE_KEXT_OVERRIDE;
 
   IORangeScalar allocateRange(IORangeScalar size, IORangeScalar alignment, bool highMemory);
   void freeRange(IORangeScalar start, IORangeScalar size);

@@ -1,11 +1,12 @@
 //
 //  HyperVModuleDevice.cpp
-//  Hyper-V module device driver (ACPI resources for VMBus on Gen2)
+//  Hyper-V module device driver (provides MMIO space for synthetic graphics and PCI passthrough)
 //
 //  Copyright © 2022 Goldfish64. All rights reserved.
 //
 
 #include "HyperVModuleDevice.hpp"
+#include "HyperVGraphicsProvider.hpp"
 #include "AppleACPIRange.hpp"
 
 OSDefineMetaClassAndStructors(HyperVModuleDevice, super);
@@ -13,10 +14,10 @@ OSDefineMetaClassAndStructors(HyperVModuleDevice, super);
 bool HyperVModuleDevice::start(IOService *provider) {
   AppleACPIRange *acpiRanges;
   UInt32         acpiRangeCount;
-  
+
   OSArray        *deviceMemoryArray;
   IODeviceMemory *deviceMemory;
-  
+
   HVCheckDebugArgs();
 
   if (!super::start(provider)) {
@@ -78,11 +79,7 @@ bool HyperVModuleDevice::start(IOService *provider) {
   setDeviceMemory(deviceMemoryArray);
   deviceMemoryArray->release();
 
-  //
-  // Reserve FB memory.
-  // TODO: make this dynamic
-  //
-  _rangeAllocatorLow->allocateRange(0x40000000, 0x4000000);
+  getFramebufferArea();
 
   HVDBGLOG("Hyper-V Module Device initialized with free size: %u bytes (low) %u bytes (high)",
            _rangeAllocatorLow->getFreeCount(), _rangeAllocatorHigh->getFreeCount());
@@ -93,6 +90,58 @@ bool HyperVModuleDevice::start(IOService *provider) {
 void HyperVModuleDevice::stop(IOService *provider) {
   OSSafeReleaseNULL(_rangeAllocatorLow);
   OSSafeReleaseNULL(_rangeAllocatorHigh);
+}
+
+bool HyperVModuleDevice::getFramebufferArea() {
+  OSDictionary           *gfxProvMatching;
+  IOService              *gfxProvService;
+  HyperVGraphicsProvider *gfxProvider;
+  IORangeScalar          fbBase;
+  IORangeScalar          fbTotalLength;
+  IORangeScalar          fbInitialLength;
+
+  //
+  // Get HyperVGraphicsProvider instance.
+  // We'll query it for the current framebuffer location and size.
+  //
+  gfxProvMatching = IOService::serviceMatching("HyperVGraphicsProvider");
+  if (gfxProvMatching == nullptr) {
+    HVSYSLOG("Failed to create HyperVGraphicsProvider matching dictionary");
+    return false;
+  }
+
+  HVDBGLOG("Waiting for HyperVGraphicsProvider");
+#if __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_6
+  gfxProvService = IOService::waitForService(gfxProvMatching);
+  if (gfxProvService != nullptr) {
+    gfxProvService->retain();
+  }
+#else
+  gfxProvService = waitForMatchingService(gfxProvMatching);
+  gfxProvMatching->release();
+#endif
+
+  if (gfxProvService == nullptr) {
+    HVSYSLOG("Failed to locate HyperVGraphicsProvider");
+    return false;
+  }
+  gfxProvider = OSDynamicCast(HyperVGraphicsProvider, gfxProvService);
+  if (gfxProvider == nullptr) {
+    gfxProvService->release();
+    HVSYSLOG("Failed to locate HyperVGraphicsProvider");
+    return false;
+  }
+  HVDBGLOG("Got instance of HyperVGraphicsProvider");
+
+  gfxProvider->getFramebufferArea(&fbBase, &fbTotalLength, &fbInitialLength);
+  gfxProvService->release();
+
+  //
+  // Reserve FB memory.
+  //
+  HVDBGLOG("Framebuffer is at 0x%llX (%llu bytes)", fbBase, fbTotalLength);
+  _rangeAllocatorLow->allocateRange(fbBase, fbTotalLength);
+  return true;
 }
 
 IORangeScalar HyperVModuleDevice::allocateRange(IORangeScalar size, IORangeScalar alignment, bool highMemory) {

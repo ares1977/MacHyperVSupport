@@ -9,31 +9,23 @@
 #define HyperVGraphicsBridge_hpp
 
 #include <IOKit/pci/IOPCIBridge.h>
-#include "HyperVVMBusDevice.hpp"
-#include "HyperVGraphicsBridgeRegs.hpp"
+#include "HyperV.hpp"
 
 class HyperVGraphicsBridge : public HV_PCIBRIDGE_CLASS {
   OSDeclareDefaultStructors(HyperVGraphicsBridge);
-  HVDeclareLogFunctionsVMBusChild("gfxb");
+  HVDeclareLogFunctions("gfxb");
   typedef HV_PCIBRIDGE_CLASS super;
 
 private:
-  HyperVVMBusDevice *_hvDevice;
-  VMBusVersion      _currentGraphicsVersion = { };
-
   //
   // Fake PCI structures.
   //
-  IOSimpleLock      *_pciLock    = nullptr;
-  UInt8             _fakePCIDeviceSpace[256];
-  PE_Video          _consoleInfo = { };
+  IOSimpleLock  *_pciLock        = nullptr;
+  UInt8         _fakePCIDeviceSpace[256];
+  IORangeScalar _fbBaseAddress   = 0;
+  IORangeScalar _fbInitialLength = 0;
 
   void fillFakePCIDeviceSpace();
-
-  void handlePacket(VMBusPacketHeader *pktHeader, UInt32 pktHeaderLength, UInt8 *pktData, UInt32 pktDataLength);
-  IOReturn sendGraphicsMessage(HyperVGraphicsMessage *gfxMessage, HyperVGraphicsMessage *gfxMessageResponse = nullptr, UInt32 gfxMessageResponseSize = 0);
-  IOReturn negotiateVersion(VMBusVersion version);
-  IOReturn connectGraphics();
 
 public:
   //

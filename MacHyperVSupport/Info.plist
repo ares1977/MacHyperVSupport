@@ -61,10 +61,21 @@
 		<dict>
 			<key>CFBundleIdentifier</key>
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+			<key>IOClass</key>
+			<string>HyperVGraphicsBridge</string>
+			<key>IOProbeScore</key>
+			<integer>1000</integer>
+			<key>IOProviderClass</key>
+			<string>HyperVGraphicsProvider</string>
+		</dict>
+		<key>HyperVGraphicsProvider</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			<key>HVType</key>
 			<string>da0a7802-e377-4aac-8e77-0558eb1073f8</string>
 			<key>IOClass</key>
-			<string>HyperVGraphicsBridge</string>
+			<string>HyperVGraphicsProvider</string>
 			<key>IOProviderClass</key>
 			<string>HyperVVMBusDevice</string>
 		</dict>

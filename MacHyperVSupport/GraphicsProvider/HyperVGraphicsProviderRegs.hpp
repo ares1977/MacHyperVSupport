@@ -1,12 +1,12 @@
 //
-//  HyperVGraphicsBridgeRegs.hpp
-//  Hyper-V synthetic graphics bridge
+//  HyperVGraphicsProviderRegs.hpp
+//  Hyper-V synthetic graphics provider
 //
 //  Copyright © 2022 Goldfish64. All rights reserved.
 //
 
-#ifndef HyperVGraphicsBridgeRegs_hpp
-#define HyperVGraphicsBridgeRegs_hpp
+#ifndef HyperVGraphicsProviderRegs_hpp
+#define HyperVGraphicsProviderRegs_hpp
 
 #define kHyperVPCIVendorMicrosoft   0x1414
 #define kHyperVPCIDeviceHyperVVideo 0x5353
@@ -15,6 +15,13 @@
 #define kHyperVGraphicsDefaultHeight  864
 #define kHyperVGraphicsMinWidth       640
 #define kHyperVGraphicsMinHeight      480
+
+//
+// Maximums.
+// Max resolution 
+//
+#define kHyperVGraphicsMaxWidth       1600
+#define kHyperVGraphicsMaxHeight      1200
 
 #define kHyperVGraphicsRingBufferSize (64 * PAGE_SIZE)
 #define kHyperVGraphicsMaxPacketSize  (4 * PAGE_SIZE)
