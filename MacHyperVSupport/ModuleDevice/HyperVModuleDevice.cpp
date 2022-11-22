@@ -6,8 +6,9 @@
 //
 
 #include "HyperVModuleDevice.hpp"
-#include "HyperVGraphicsProvider.hpp"
+
 #include "AppleACPIRange.hpp"
+#include <IOKit/IOPlatformExpert.h>
 
 OSDefineMetaClassAndStructors(HyperVModuleDevice, super);
 
@@ -79,7 +80,7 @@ bool HyperVModuleDevice::start(IOService *provider) {
   setDeviceMemory(deviceMemoryArray);
   deviceMemoryArray->release();
 
-  getFramebufferArea();
+  reserveFramebufferArea();
 
   HVDBGLOG("Hyper-V Module Device initialized with free size: %u bytes (low) %u bytes (high)",
            _rangeAllocatorLow->getFreeCount(), _rangeAllocatorHigh->getFreeCount());
@@ -92,68 +93,49 @@ void HyperVModuleDevice::stop(IOService *provider) {
   OSSafeReleaseNULL(_rangeAllocatorHigh);
 }
 
-bool HyperVModuleDevice::getFramebufferArea() {
-  OSDictionary           *gfxProvMatching;
-  IOService              *gfxProvService;
-  HyperVGraphicsProvider *gfxProvider;
-  IORangeScalar          fbBase;
-  IORangeScalar          fbTotalLength;
-  IORangeScalar          fbInitialLength;
+bool HyperVModuleDevice::reserveFramebufferArea() {
+  PE_Video consoleInfo;
+  IORangeScalar fbStart;
+  IORangeScalar fbLength;
 
   //
-  // Get HyperVGraphicsProvider instance.
-  // We'll query it for the current framebuffer location and size.
+  // Pull console info. We'll use the base address but the length will be gathered from Hyper-V.
   //
-  gfxProvMatching = IOService::serviceMatching("HyperVGraphicsProvider");
-  if (gfxProvMatching == nullptr) {
-    HVSYSLOG("Failed to create HyperVGraphicsProvider matching dictionary");
+  if (getPlatform()->getConsoleInfo(&consoleInfo) != kIOReturnSuccess) {
+    HVSYSLOG("Failed to get console info");
     return false;
   }
-
-  HVDBGLOG("Waiting for HyperVGraphicsProvider");
-#if __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_10_6
-  gfxProvService = IOService::waitForService(gfxProvMatching);
-  if (gfxProvService != nullptr) {
-    gfxProvService->retain();
-  }
-#else
-  gfxProvService = waitForMatchingService(gfxProvMatching);
-  gfxProvMatching->release();
-#endif
-
-  if (gfxProvService == nullptr) {
-    HVSYSLOG("Failed to locate HyperVGraphicsProvider");
-    return false;
-  }
-  gfxProvider = OSDynamicCast(HyperVGraphicsProvider, gfxProvService);
-  if (gfxProvider == nullptr) {
-    gfxProvService->release();
-    HVSYSLOG("Failed to locate HyperVGraphicsProvider");
-    return false;
-  }
-  HVDBGLOG("Got instance of HyperVGraphicsProvider");
-
-  gfxProvider->getFramebufferArea(&fbBase, &fbTotalLength, &fbInitialLength);
-  gfxProvService->release();
+  fbStart  = consoleInfo.v_baseAddr;
+  fbLength = consoleInfo.v_height * consoleInfo.v_rowBytes;
+  HVDBGLOG("Console is at 0x%X size 0x%X (%ux%u, bpp: %u, bytes/row: %u)",
+           fbStart, fbLength, consoleInfo.v_width, consoleInfo.v_height,
+           consoleInfo.v_depth, consoleInfo.v_rowBytes);
 
   //
-  // Reserve FB memory.
+  // Allocate intial framebuffer area to prevent use.
+  // On some versions of Hyper-V, the initial framebuffer may not actually be in the MMIO ranges.
+  // This can be silently ignored.
   //
-  HVDBGLOG("Framebuffer is at 0x%llX (%llu bytes)", fbBase, fbTotalLength);
-  _rangeAllocatorLow->allocateRange(fbBase, fbTotalLength);
+  if (fbStart > UINT32_MAX) {
+    _rangeAllocatorHigh->allocateRange(fbStart, fbLength);
+  } else {
+    _rangeAllocatorLow->allocateRange(fbStart, fbLength);
+  }
   return true;
 }
 
-IORangeScalar HyperVModuleDevice::allocateRange(IORangeScalar size, IORangeScalar alignment, bool highMemory) {
-  IORangeScalar range;
-  bool result = false;
+IORangeScalar HyperVModuleDevice::allocateRange(IORangeScalar size, IORangeScalar alignment, IORangeScalar maxAddress) {
+  IORangeScalar range = 0;
+  bool result         = false;
 
-  if (highMemory) {
+  if (maxAddress > UINT32_MAX) {
     result = _rangeAllocatorHigh->allocate(size, &range, alignment);
-  } else {
+  }
+  if (!result) {
     result = _rangeAllocatorLow->allocate(size, &range, alignment);
   }
-  HVDBGLOG("Allocation result for size 0x%llX (high: %u) - %u", size, highMemory, result);
+
+  HVDBGLOG("Allocation result for size 0x%llX (max: 0x%llX) - %u", size, maxAddress, result);
   HVDBGLOG("Range result: 0x%llX", result ? range : 0);
 
   return result ? range : 0;

@@ -24,8 +24,7 @@ private:
   //
   IORangeAllocator *_rangeAllocatorLow  = nullptr;
   IORangeAllocator *_rangeAllocatorHigh = nullptr;
-
-  bool getFramebufferArea();
+  bool reserveFramebufferArea();
 
 public:
   //
@@ -34,7 +33,7 @@ public:
   bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
   void stop(IOService *provider) APPLE_KEXT_OVERRIDE;
 
-  IORangeScalar allocateRange(IORangeScalar size, IORangeScalar alignment, bool highMemory);
+  IORangeScalar allocateRange(IORangeScalar size, IORangeScalar alignment, IORangeScalar maxAddress);
   void freeRange(IORangeScalar start, IORangeScalar size);
 };
 

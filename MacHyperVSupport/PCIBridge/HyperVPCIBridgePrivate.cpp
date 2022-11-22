@@ -182,7 +182,7 @@ bool HyperVPCIBridge::allocatePCIConfigWindow() {
   hvModuleDevice = OSDynamicCast(HyperVModuleDevice, vmodService);
   
   // Allocate PCI config window.
-  pciConfigSpace = hvModuleDevice->allocateRange(kHyperVPCIBridgeWindowSize, PAGE_SIZE, true);
+  pciConfigSpace = hvModuleDevice->allocateRange(kHyperVPCIBridgeWindowSize, PAGE_SIZE, 0xFFFFFFFFFFFFFFFFULL);
   pciConfigMemoryDescriptor = IOMemoryDescriptor::withPhysicalAddress(pciConfigSpace, kHyperVPCIBridgeWindowSize, static_cast<IODirection>(kIOMemoryDirectionInOut));
   pciConfigMemoryMap = pciConfigMemoryDescriptor->map();
   HVDBGLOG("PCI config window located @ phys 0x%llX", pciConfigSpace);
@@ -244,7 +244,7 @@ bool HyperVPCIBridge::queryResourceRequirements() {
       // Determine BAR size and allocate it.
       barSizes[i] = getBarSize(barVal);
       HVDBGLOG("%u-bit BAR requires 0x%llX bytes", isBar64Bit ? 64 : 32, barSizes[i]);
-      bars[i] = hvModuleDevice->allocateRange(barSizes[i], barSizes[i], isBar64Bit);
+      bars[i] = hvModuleDevice->allocateRange(barSizes[i], barSizes[i], isBar64Bit ? 0xFFFFFFFFFFFFFFFFULL : 0xFFFFFFFF);
       
       // Write BAR to device.
       writePCIConfig(kIOPCIConfigBaseAddress0 + (i * sizeof (UInt32)), sizeof (UInt32), (UInt32)bars[i]);
