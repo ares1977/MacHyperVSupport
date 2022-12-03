@@ -36,7 +36,7 @@
 // Fixed transaction IDs for request/response due to transaction IDs
 // not being respected by graphics system.
 //
-#define kHyperVGraphicsVersionRequestTransactionID 0xCAFECAFE
+#define kHyperVGraphicsRequestTransactionID 0xCAFECAFE
 
 //
 // Graphics messages.
@@ -52,17 +52,17 @@ typedef struct __attribute__((packed)) {
 } HyperVGraphicsPipeMessageHeader;
 
 typedef enum : UInt32 {
-  kHyperVGraphicsMessageTypeError               = 0x0,
-  kHyperVGraphicsMessageTypeVersionRequest      = 0x1,
-  kHyperVGraphicsMessageTypeVersionResponse     = 0x2,
-  kHyperVGraphicsMessageTypeVRAMLocation        = 0x3,
-  kHyperVGraphicsMessageTypeVRAMAck             = 0x4,
-  kHyperVGraphicsMessageTypeSituationUpdate     = 0x5,
-  kHyperVGraphicsMessageTypeSituationUpdateAck  = 0x6,
-  kHyperVGraphicsMessageTypePointerPosition     = 0x7,
-  kHyperVGraphicsMessageTypePointerShape        = 0x8,
-  kHyperVGraphicsMessageTypeFeatureChange       = 0x9,
-  kHyperVGraphicsMessageTypeDIRT                = 0xA
+  kHyperVGraphicsMessageTypeError                     = 0x0,
+  kHyperVGraphicsMessageTypeVersionRequest            = 0x1,
+  kHyperVGraphicsMessageTypeVersionResponse           = 0x2,
+  kHyperVGraphicsMessageTypeVRAMLocation              = 0x3,
+  kHyperVGraphicsMessageTypeVRAMAck                   = 0x4,
+  kHyperVGraphicsMessageTypeScreenResolutionUpdate    = 0x5,
+  kHyperVGraphicsMessageTypeScreenResolutionUpdateAck = 0x6,
+  kHyperVGraphicsMessageTypePointerPosition           = 0x7,
+  kHyperVGraphicsMessageTypePointerShape              = 0x8,
+  kHyperVGraphicsMessageTypeFeatureChange             = 0x9,
+  kHyperVGraphicsMessageTypeDIRT                      = 0xA
 } HyperVGraphicsMessageType;
 
 //
@@ -101,17 +101,17 @@ typedef struct __attribute__((packed)) {
   UInt32 width;
   UInt32 height;
   UInt32 pitch;
-} HyperVGraphicsVideoOutputSituation;
+} HyperVGraphicsVideoOutputScreenResolution;
 
 typedef struct __attribute__((packed)) {
-  UInt64                             context;
-  UInt8                              videoOutputCount;
-  HyperVGraphicsVideoOutputSituation videoOutputs[];
-} HyperVGraphicsMessageSituationUpdate;
+  UInt64                                    context;
+  UInt8                                     videoOutputCount;
+  HyperVGraphicsVideoOutputScreenResolution videoOutputs[1];
+} HyperVGraphicsMessageScreenResolutionUpdate;
 
 typedef struct __attribute__((packed)) {
   UInt64 context;
-} HyperVGraphicsMessageSituationAck;
+} HyperVGraphicsMessageScreenResolutionAck;
 
 typedef struct __attribute__((packed)) {
   UInt8  isVisible;
@@ -151,7 +151,7 @@ typedef struct __attribute__((packed)) {
 typedef struct __attribute__((packed)) {
   UInt8                       videoOutput;
   UInt8                       dirtCount;
-  HyperVGraphicsDIRTRectangle dirtRects[];
+  HyperVGraphicsDIRTRectangle dirtRects[1];
 } HyperVGraphicsMessageDIRT;
 
 typedef struct __attribute__((packed)) {
@@ -159,16 +159,16 @@ typedef struct __attribute__((packed)) {
   HyperVGraphicsMessageHeader     gfxHeader;
 
   union {
-    HyperVGraphicsMessageVersionRequest  versionRequest;
-    HyperVGraphicsMessageVersionResponse versionResponse;
-    HyperVGraphicsMessageVRAMLocation    vramLocation;
-    HyperVGraphicsMessageVRAMAck         vramAck;
-    HyperVGraphicsMessageSituationUpdate situationUpdate;
-    HyperVGraphicsMessageSituationAck    situationAck;
-    HyperVGraphicsMessagePointerPosition pointerPosition;
-    HyperVGraphicsMessagePointerShape    pointerShape;
-    HyperVGraphicsMessageFeatureUpdate   featureUpdate;
-    HyperVGraphicsMessageDIRT            dirt;
+    HyperVGraphicsMessageVersionRequest         versionRequest;
+    HyperVGraphicsMessageVersionResponse        versionResponse;
+    HyperVGraphicsMessageVRAMLocation           vramLocation;
+    HyperVGraphicsMessageVRAMAck                vramAck;
+    HyperVGraphicsMessageScreenResolutionUpdate screenResolutionUpdate;
+    HyperVGraphicsMessageScreenResolutionAck    screenResolutionAck;
+    HyperVGraphicsMessagePointerPosition        pointerPosition;
+    HyperVGraphicsMessagePointerShape           pointerShape;
+    HyperVGraphicsMessageFeatureUpdate          featureUpdate;
+    HyperVGraphicsMessageDIRT                   dirt;
   };
 } HyperVGraphicsMessage;
 

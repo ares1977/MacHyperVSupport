@@ -65,6 +65,21 @@ bool HyperVGraphicsProvider::start(IOService *provider) {
     _fbInitialLength = consoleInfo.v_height * consoleInfo.v_rowBytes;
 
     //
+    // Initialize refresh timer.
+    //
+    _timerEventSource = IOTimerEventSource::timerEventSource(this,
+                                                             OSMemberFunctionCast(IOTimerEventSource::Action, this, &HyperVGraphicsProvider::handleRefreshTimer));
+    if (_timerEventSource == nullptr) {
+      HVSYSLOG("Failed to create screen refresh timer event source");
+      break;
+    }
+    status = getWorkLoop()->addEventSource(_timerEventSource);
+    if (status != kIOReturnSuccess) {
+      HVSYSLOG("Failed to add screen refresh timer event source");
+      break;
+    }
+
+    //
     // Install packet handler.
     //
     status = _hvDevice->installPacketActions(this, OSMemberFunctionCast(HyperVVMBusDevice::PacketReadyAction, this, &HyperVGraphicsProvider::handlePacket),
@@ -89,6 +104,9 @@ bool HyperVGraphicsProvider::start(IOService *provider) {
       break;
     }
 
+    _timerEventSource->enable();
+    _timerEventSource->setTimeoutMS(10);
+
     registerService();
     HVDBGLOG("Initialized Hyper-V Synthetic Graphics Provider");
     result = true;
@@ -112,8 +130,7 @@ void HyperVGraphicsProvider::stop(IOService *provider) {
   super::stop(provider);
 }
 
-void HyperVGraphicsProvider::getFramebufferArea(IORangeScalar *baseAddress, IORangeScalar *totalLength, IORangeScalar *initialLength) {
-  *baseAddress   = _fbBaseAddress;
-  *totalLength   = _fbTotalLength;
-  *initialLength = _fbInitialLength;
+void HyperVGraphicsProvider::getFramebufferArea(IORangeScalar *baseAddress, IORangeScalar *length) {
+  *baseAddress = _gfxMmioBase;
+  *length      = _gfxMmioLength;
 }

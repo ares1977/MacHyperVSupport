@@ -30,7 +30,7 @@ bool HyperVGraphicsBridge::start(IOService *provider) {
   //
   // Get initial framebuffer info.
   //
-  gfxProvider->getFramebufferArea(&_fbBaseAddress, &fbTotalLength, &_fbInitialLength);
+  gfxProvider->getFramebufferArea(&_fbBaseAddress, &_fbInitialLength);
 
   HVCheckDebugArgs();
   HVDBGLOG("Initializing Hyper-V Synthetic Graphics Bridge");
@@ -96,7 +96,9 @@ bool HyperVGraphicsBridge::configure(IOService *provider) {
   //
   // Add framebuffer memory range to bridge.
   //
-  addBridgeMemoryRange(_fbBaseAddress, _fbInitialLength, true);
+  bool result = addBridgeMemoryRange(_fbBaseAddress, _fbInitialLength, true);
+  HVSYSLOG("Got base at 0x%llX 0x%llX - %u", _fbBaseAddress, _fbInitialLength, result);
+  
   return super::configure(provider);
 }
 
@@ -228,5 +230,6 @@ void HyperVGraphicsBridge::fillFakePCIDeviceSpace() {
   OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemVendorID, kHyperVPCIVendorMicrosoft);
   OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemID, kHyperVPCIDeviceHyperVVideo);
 
-  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)_fbBaseAddress);
+  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)0xF8300000);
+ // OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)(_fbBaseAddress >> 32));
 }
