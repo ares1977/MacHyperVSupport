@@ -1858,6 +1858,7 @@
 					"$(inherited)",
 					"MODULE_VERSION=$(MODULE_VERSION)",
 					"PRODUCT_NAME=$(PRODUCT_NAME)",
+					"LILU_CUSTOM_IOKIT_INIT=1",
 				);
 				INFOPLIST_FILE = MacHyperVSupport/Info.plist;
 				LDPLUSPLUS = "$(inherited)";
@@ -1940,6 +1941,7 @@
 					"$(inherited)",
 					"MODULE_VERSION=$(MODULE_VERSION)",
 					"PRODUCT_NAME=$(PRODUCT_NAME)",
+					"LILU_CUSTOM_IOKIT_INIT=1",
 				);
 				INFOPLIST_FILE = MacHyperVSupport/Info.plist;
 				LDPLUSPLUS = "$(inherited)";
@@ -2020,6 +2022,7 @@
 					"$(inherited)",
 					"MODULE_VERSION=$(MODULE_VERSION)",
 					"PRODUCT_NAME=$(PRODUCT_NAME)",
+					"LILU_CUSTOM_IOKIT_INIT=1",
 				);
 				INFOPLIST_FILE = MacHyperVSupport/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
@@ -2073,6 +2076,7 @@
 					"$(inherited)",
 					"MODULE_VERSION=$(MODULE_VERSION)",
 					"PRODUCT_NAME=$(PRODUCT_NAME)",
+					"LILU_CUSTOM_IOKIT_INIT=1",
 				);
 				INFOPLIST_FILE = MacHyperVSupport/Info.plist;
 				LIBRARY_SEARCH_PATHS = (
