@@ -30,9 +30,11 @@ private:
   IORangeScalar     _fbTotalLength   = 0;
   IORangeScalar     _fbInitialLength = 0;
   
-  UInt8             *_logoImageData      = nullptr;
-  size_t            _logoImageSize       = 0;
-  size_t            _logoRowBytes        = 0;
+  UInt8  *_logoImageData = nullptr;
+  size_t _logoImageSize  = 0;
+  size_t _logoRowBytes   = 0;
+  UInt32 _screenWidth    = 0;
+  UInt32 _screenHeight   = 0;
 
   void handlePacket(VMBusPacketHeader *pktHeader, UInt32 pktHeaderLength, UInt8 *pktData, UInt32 pktDataLength);
   void handleRefreshTimer(IOTimerEventSource *sender);
@@ -42,10 +44,11 @@ private:
   IOReturn allocateGraphicsMemory(IORangeScalar mmioLength);
   bool storeBootLogo();
   bool drawBootLogo();
+  bool parseScreenResolutionStr(char *screenResStr, UInt32 *width, UInt32 *height);
   
   IOReturn negotiateVersion(VMBusVersion version);
   IOReturn updateGraphicsMemoryLocation();
-  IOReturn updateScreenResolution();
+  IOReturn updateScreenResolution(UInt32 width, UInt32 height);
 
 public:
   //
