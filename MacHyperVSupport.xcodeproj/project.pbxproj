@@ -470,6 +470,7 @@
 		41F2E44A2666F37B00CE26CE /* HyperVPCIProvider.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HyperVPCIProvider.hpp; sourceTree = "<group>"; };
 		41F2E45A26683B2B00CE26CE /* HyperVPCIRoot.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = HyperVPCIRoot.cpp; sourceTree = "<group>"; };
 		41F2E45B26683B2C00CE26CE /* HyperVPCIRoot.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HyperVPCIRoot.hpp; sourceTree = "<group>"; };
+		41F471E82944E8470068E169 /* HyperVGraphicsProviderPlatformFunctions.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = HyperVGraphicsProviderPlatformFunctions.hpp; sourceTree = "<group>"; };
 		41F47BEC290F056600C0E3C5 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		41F47C53290F058400C0E3C5 /* MacHyperVFramebuffer.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MacHyperVFramebuffer.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		41F47C57290F126500C0E3C5 /* HyperVGraphicsFramebuffer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = HyperVGraphicsFramebuffer.cpp; sourceTree = "<group>"; };
@@ -896,6 +897,7 @@
 				41B82C66292C15A10020206D /* HyperVGraphicsProvider.hpp */,
 				41B82C6B292C66A40020206D /* HyperVGraphicsProviderPrivate.cpp */,
 				4159EDD7290221C300867664 /* HyperVGraphicsProviderRegs.hpp */,
+				41F471E82944E8470068E169 /* HyperVGraphicsProviderPlatformFunctions.hpp */,
 			);
 			path = GraphicsProvider;
 			sourceTree = "<group>";

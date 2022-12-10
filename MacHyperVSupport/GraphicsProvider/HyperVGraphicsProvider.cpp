@@ -6,6 +6,7 @@
 //
 
 #include "HyperVGraphicsProvider.hpp"
+#include "HyperVGraphicsProviderPlatformFunctions.hpp"
 
 OSDefineMetaClassAndStructors(HyperVGraphicsProvider, super);
 
@@ -128,6 +129,17 @@ void HyperVGraphicsProvider::stop(IOService *provider) {
   }
 
   super::stop(provider);
+}
+
+IOReturn HyperVGraphicsProvider::callPlatformFunction(const OSSymbol *functionName, bool waitForFunction,
+                                                      void *param1, void *param2, void *param3, void *param4) {
+  HVDBGLOG("Attempting to call function '%s'", functionName->getCStringNoCopy());
+
+  if (functionName->isEqualTo(kHyperVGraphicsFunctionSetResolution)) {
+    return updateScreenResolution(*((UInt32*)param1), *((UInt32*)param2), false);
+  } else {
+    return kIOReturnUnsupported;
+  }
 }
 
 void HyperVGraphicsProvider::getFramebufferArea(IORangeScalar *baseAddress, IORangeScalar *length) {

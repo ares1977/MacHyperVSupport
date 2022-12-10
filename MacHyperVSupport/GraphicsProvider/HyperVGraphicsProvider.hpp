@@ -48,7 +48,7 @@ private:
   
   IOReturn negotiateVersion(VMBusVersion version);
   IOReturn updateGraphicsMemoryLocation();
-  IOReturn updateScreenResolution(UInt32 width, UInt32 height);
+  IOReturn updateScreenResolution(UInt32 width, UInt32 height, bool isBoot);
 
 public:
   //
@@ -56,6 +56,8 @@ public:
   //
   bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
   void stop(IOService *provider) APPLE_KEXT_OVERRIDE;
+  IOReturn callPlatformFunction(const OSSymbol *functionName, bool waitForFunction,
+                                void *param1, void *param2, void *param3, void *param4) APPLE_KEXT_OVERRIDE;
 
   void getFramebufferArea(IORangeScalar *baseAddress, IORangeScalar *length);
 };

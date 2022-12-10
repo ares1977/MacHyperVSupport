@@ -138,7 +138,7 @@ IOReturn HyperVGraphicsProvider::connectGraphics() {
   }
   HVDBGLOG("Using screen resolution of %ux%u", width, height);
 
-  status = updateScreenResolution(width, height);
+  status = updateScreenResolution(width, height, true);
   if (status != kIOReturnSuccess) {
     HVSYSLOG("Failed to change screen resolution with status 0x%X", status);
     return status;
@@ -341,7 +341,7 @@ IOReturn HyperVGraphicsProvider::updateGraphicsMemoryLocation() {
   return kIOReturnSuccess;
 }
 
-IOReturn HyperVGraphicsProvider::updateScreenResolution(UInt32 width, UInt32 height) {
+IOReturn HyperVGraphicsProvider::updateScreenResolution(UInt32 width, UInt32 height, bool isBoot) {
   IOReturn              status;
   PE_Video              consoleInfo;
   HyperVGraphicsMessage gfxMsg = { };
@@ -385,27 +385,32 @@ IOReturn HyperVGraphicsProvider::updateScreenResolution(UInt32 width, UInt32 hei
   }
 
   //
-  // Send new framebuffer physical address.
+  // If still booting and pre-userspace, update console and boot logo.
   //
-  consoleInfo.v_offset   = 0;
-  consoleInfo.v_baseAddr = _gfxMmioBase | 1;
-  getPlatform()->setConsoleInfo(0, kPEDisableScreen);
-  getPlatform()->setConsoleInfo(&consoleInfo, kPEBaseAddressChange);
-
-  //
-  // Change framebuffer screen resolution.
-  //
-  getPlatform()->getConsoleInfo(&consoleInfo);
-  consoleInfo.v_width = width;
-  consoleInfo.v_height = height;
-  consoleInfo.v_rowBytes = width * (pixelDepth / 8);
-  getPlatform()->setConsoleInfo(&consoleInfo, kPEEnableScreen);
-  
-  //
-  // Redraw boot logo and progress bar.
-  //
-  drawBootLogo();
-  HyperVPlatformProvider::getInstance()->resetProgressBar();
+  if (isBoot) {
+    //
+    // Send new framebuffer physical address.
+    //
+    consoleInfo.v_offset   = 0;
+    consoleInfo.v_baseAddr = _gfxMmioBase | 1;
+    getPlatform()->setConsoleInfo(0, kPEDisableScreen);
+    getPlatform()->setConsoleInfo(&consoleInfo, kPEBaseAddressChange);
+    
+    //
+    // Change framebuffer screen resolution.
+    //
+    getPlatform()->getConsoleInfo(&consoleInfo);
+    consoleInfo.v_width = width;
+    consoleInfo.v_height = height;
+    consoleInfo.v_rowBytes = width * (pixelDepth / 8);
+    getPlatform()->setConsoleInfo(&consoleInfo, kPEEnableScreen);
+    
+    //
+    // Redraw boot logo and progress bar.
+    //
+    drawBootLogo();
+    HyperVPlatformProvider::getInstance()->resetProgressBar();
+  }
 
   _screenWidth  = width;
   _screenHeight = height;
