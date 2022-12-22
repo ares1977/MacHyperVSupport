@@ -16,7 +16,6 @@ OSDefineMetaClassAndStructors(HyperVGraphicsBridge, super);
 
 bool HyperVGraphicsBridge::start(IOService *provider) {
   HyperVGraphicsProvider *gfxProvider;
-  IORangeScalar          fbTotalLength;
 
   //
   // Get parent HyperVGraphicsProvider object.
@@ -30,7 +29,7 @@ bool HyperVGraphicsBridge::start(IOService *provider) {
   //
   // Get initial framebuffer info.
   //
-  gfxProvider->getFramebufferArea(&_fbBaseAddress, &_fbInitialLength);
+  gfxProvider->getFramebufferArea(&_fbBaseAddress, &_fbLength);
 
   HVCheckDebugArgs();
   HVDBGLOG("Initializing Hyper-V Synthetic Graphics Bridge");
@@ -96,8 +95,8 @@ bool HyperVGraphicsBridge::configure(IOService *provider) {
   //
   // Add framebuffer memory range to bridge.
   //
-  bool result = addBridgeMemoryRange(_fbBaseAddress, _fbInitialLength, true);
-  HVSYSLOG("Got base at 0x%llX 0x%llX - %u", _fbBaseAddress, _fbInitialLength, result);
+  bool result = addBridgeMemoryRange(_fbBaseAddress, _fbLength, true);
+  HVSYSLOG("Got base at 0x%llX 0x%llX - %u", _fbBaseAddress, _fbLength, result);
   
   return super::configure(provider);
 }
@@ -139,7 +138,7 @@ void HyperVGraphicsBridge::configWrite32(IOPCIAddressSpace space, UInt8 offset, 
   
   if (offset == kIOPCIConfigurationOffsetBaseAddress0 && data == 0xFFFFFFFF) {
     HVDBGLOG("Got bar size request");
-    OSWriteLittleInt32(_fakePCIDeviceSpace, offset, (0xFFFFFFFF - _fbInitialLength) + 1);
+    OSWriteLittleInt32(_fakePCIDeviceSpace, offset, (0xFFFFFFFF - (UInt32) _fbLength) + 1);
     return;
   }
   
@@ -230,6 +229,6 @@ void HyperVGraphicsBridge::fillFakePCIDeviceSpace() {
   OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemVendorID, kHyperVPCIVendorMicrosoft);
   OSWriteLittleInt16(_fakePCIDeviceSpace, kIOPCIConfigSubSystemID, kHyperVPCIDeviceHyperVVideo);
 
-  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)0xF8300000);
+  OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)_fbBaseAddress);
  // OSWriteLittleInt32(_fakePCIDeviceSpace, kIOPCIConfigBaseAddress0, (UInt32)(_fbBaseAddress >> 32));
 }

@@ -26,10 +26,12 @@
 			<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 			<key>IOClass</key>
 			<string>HyperVGraphicsFramebuffer</string>
+			<key>IOMatchCategory</key>
+			<string>IOFramebuffer</string>
 			<key>IOPCIMatch</key>
 			<string>0x53531414</string>
 			<key>IOProbeScore</key>
-			<integer>1000</integer>
+			<integer>50000</integer>
 			<key>IOProviderClass</key>
 			<string>IOPCIDevice</string>
 		</dict>
@@ -50,8 +52,6 @@
 		<string>8.0.0</string>
 		<key>com.apple.kpi.mach</key>
 		<string>8.0.0</string>
-		<key>fish.goldfish64.MacHyperVSupport</key>
-		<string>$(CURRENT_PROJECT_VERSION)</string>
 	</dict>
 </dict>
 </plist>

@@ -23,7 +23,7 @@ private:
   IOSimpleLock  *_pciLock        = nullptr;
   UInt8         _fakePCIDeviceSpace[256];
   IORangeScalar _fbBaseAddress   = 0;
-  IORangeScalar _fbInitialLength = 0;
+  IORangeScalar _fbLength        = 0;
 
   void fillFakePCIDeviceSpace();
 
