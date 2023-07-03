@@ -32,6 +32,7 @@ static const HyperVGraphicsMode graphicsModes[] = {
   { 1440, 900  },
   { 1600, 900  },
   { 1600, 1200 },
+  { 1920, 1200 },
 };
 
 bool HyperVGraphicsFramebuffer::start(IOService *provider) {
